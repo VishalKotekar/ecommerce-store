@@ -12,7 +12,7 @@ const registerUser = async (req, res) => {
         if (UserExists) return res.status(400).json({ message: "User already exists" });
 
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         const user = await User.create({
             name,
@@ -26,24 +26,25 @@ const registerUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
-            token: generateToken(user._id),    
+            token: generateToken(user._id),
         });
 
     } catch (error) {
-        res.status(500).json({message:"Server error"});
+        console.error("❌ Register Error:", error.message);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 
 }
 
 //login user
-const loginUser = async (req,res) => {
+const loginUser = async (req, res) => {
     try {
-        const {email,password} = req.body;
-        const user = User.findOne({email});
-        if(!user) return res.status(400).json({message:"Invalid email or Password"});
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ message: "Invalid email or Password" });
 
-        const isMatch = bcrypt.compare(password, user.password);
-        if(!isMatch) return res.status(400).json({message:"Invalid email or password"});
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
         res.json({
             _id: user.id,
@@ -52,20 +53,20 @@ const loginUser = async (req,res) => {
             role: user.role,
             token: generateToken(user._id),
         })
-        
+
     } catch (error) {
-        res.status(500).json({message:"server error"})
+        res.status(500).json({ message: "server error" })
     }
 }
 
 //get user profile (protected)
 const getUserProfile = async (req, res) => {
-    const user  = await User.findById(req.user.id).select("-password");
-    if(user){
+    const user = await User.findById(req.user.id).select("-password");
+    if (user) {
         res.json(user)
     }
-    else{
-        res.status(404).json({message:"user not found"});
+    else {
+        res.status(404).json({ message: "user not found" });
     }
 }
 
